@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Deer Knoll Dr</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Tailwind CSS if needed -->
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Helvetica+Neue&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-box-sizing: border-box;
+            -moz-box-sizing: border-box;
+            -ms-box-sizing: border-box;
+            box-sizing: border-box;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: black;
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            color: white;
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            position: relative;
+        }
+
+        img {
+            user-drag: none;
+            -webkit-user-drag: none;
+        }
+
+        .iframe-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+        }
+
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        /* Invisible overlay when details are open */
+        #overlay {
+            position: absolute;
+            top: 0; 
+            left: 0; 
+            right: 0; 
+            bottom: 0;
+            z-index: 8; 
+            background: transparent;
+            display: none; 
+        }
+        #overlay.active {
+            display: block;
+        }
+
+        /* Parent Menu (default base values) */
+        .menu-container {
+            display: flex;
+            width: 105px;
+            height: 59px;
+            padding: 7px;
+            justify-content: center;
+            align-items: flex-start;
+            gap: 1px;
+            border-radius: 30px;
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            z-index: 10;
+            background: rgba(128, 128, 128, 0.30);
+            -webkit-backdrop-filter: blur(50px);
+            backdrop-filter: blur(50px);
+            -webkit-transform-origin: left bottom;
+            transform-origin: left bottom; /* Will use this when scaling */
+        }
+
+        .menu-container::before {
+            content: "";
+            position: absolute;
+            top: 0; 
+            left: 0; 
+            right: 0; 
+            bottom: 0;
+            border-radius: inherit;
+            background: linear-gradient(145deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0) 41%, rgba(255,255,255,0) 57%, rgba(255,255,255,0.4) 100%);
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            padding: 1.4px;
+            pointer-events: none;
+        }
+
+        .menu-button {
+            width: 45px;
+            height: 45px;
+            position: relative;
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 23.5px;
+            cursor: pointer;
+            overflow: hidden;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+
+        .menu-button img {
+            width: 21px;
+            height: 21px;
+            position: relative;
+            z-index: 1;
+            -webkit-transform: scale(1);
+            transform: scale(1);
+            pointer-events: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+
+        /* Hover circle for devices with actual hover capabilities */
+        @media (hover:hover) {
+            .menu-button:hover::before {
+                content: "";
+                position: absolute;
+                inset: 0;
+                border-radius: 50%;
+                background: rgba(255,255,255,0.15);
+                -webkit-transform: scale(1);
+                transform: scale(1);
+                -webkit-transition: -webkit-transform 0.3s ease, opacity 0.3s ease;
+                transition: transform 0.3s ease, opacity 0.3s ease;
+                opacity: 1;
+                z-index: 0;
+            }
+        }
+
+        /* For touch devices, we'll use a class "active" added via JS to simulate the hover effect */
+        .menu-button::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.15);
+            -webkit-transform: scale(0);
+            transform: scale(0);
+            opacity: 0;
+            z-index: 0;
+            -webkit-transition: -webkit-transform 0.3s ease, opacity 0.3s ease;
+            transition: transform 0.3s ease, opacity 0.3s ease;
+        }
+
+        .menu-button.active::before {
+            -webkit-transform: scale(1);
+            transform: scale(1);
+            opacity: 1;
+        }
+
+        /* Details Box (default base values) */
+        .details-box {
+            position: absolute;
+            z-index: 9; 
+            top: 60px;
+            left: 20px;
+            right: 20px;
+            bottom: 60px;
+            border-radius: 30px;
+            background: rgba(128,128,128,0.30);
+            -webkit-backdrop-filter: blur(50px);
+            backdrop-filter: blur(50px);
+            display: flex;
+            flex-direction: column;
+            opacity: 0;
+            -webkit-transform: scale(0.95);
+            transform: scale(0.95);
+            pointer-events: none;
+            -webkit-transition: opacity 0.3s ease, -webkit-transform 0.3s ease;
+            -webkit-transition: opacity 0.3s ease, transform 0.3s ease;
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            overflow: hidden;
+        }
+
+        .details-box::before {
+            content: "";
+            position: absolute;
+            top: 0; 
+            left: 0; 
+            right: 0; 
+            bottom: 0;
+            border-radius: inherit;
+            background: linear-gradient(145deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0) 41%, rgba(255,255,255,0) 57%, rgba(255,255,255,0.4) 100%);
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            padding: 1.4px;
+            pointer-events: none;
+        }
+
+        .details-box.show {
+            opacity: 1;
+            -webkit-transform: scale(1);
+            transform: scale(1);
+            pointer-events: auto;
+        }
+
+        /* Ensure no native scrollbar: use overflow:scroll and hide scrollbar completely */
+        .details-content {
+            flex: 1;
+            margin: 4px; 
+            overflow-y: scroll;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+        }
+
+        .details-content::-webkit-scrollbar {
+            width: 0;
+            height: 0; /* Ensure no visible scrollbar on iOS */
+        }
+
+        .details-inner {
+            padding: 55px 30px; 
+        }
+
+        /* Custom scrollbar */
+        .custom-scrollbar {
+            position: absolute;
+            right: 3px; 
+            top: 0; 
+            bottom: 0; 
+            width: 5px;
+            background: transparent;
+            display: flex;
+            justify-content: center;
+            opacity: 0; 
+            -webkit-transition: opacity 0.2s ease-in-out;
+            transition: opacity 0.2s ease-in-out;
+        }
+
+        .custom-scroll-thumb {
+            position: relative;
+            width: 2px;
+            background: rgba(255,255,255,0.8);
+            border-radius: 4px;
+            -webkit-transition: width 0.2s ease, background 0.2s ease;
+            transition: width 0.2s ease, background 0.2s ease;
+            pointer-events: auto;
+            cursor: grab;
+            -webkit-transform: translateY(0);
+            transform: translateY(0);
+        }
+
+        .custom-scrollbar:hover .custom-scroll-thumb,
+        .custom-scroll-thumb:active {
+            width: 5px; 
+            background: rgba(255,255,255,1);
+        }
+
+        .details-content h1 {
+            font-size: 30px;
+            font-weight: 500;
+            line-height: 1.3;
+            margin-bottom: 16px;
+            color: white;
+        }
+
+        .details-content p {
+            font-size: 17px;
+            font-weight: 400;
+            line-height: 1.5;
+            letter-spacing: 0.2px;
+            color: rgba(255, 255, 255, 0.9);
+            margin-bottom: 100px;
+        }
+
+        .legal-disclaimer {
+            font-size: 14px;
+            line-height: 1.3;
+            color: rgba(255,255,255,0.7);
+            margin-bottom: 20px;
+        }
+
+        /* Keyframes for the spring-like animations */
+        @-webkit-keyframes shrinkIcon {
+            0% {
+                -webkit-transform: scale(1);
+                transform: scale(1);
+            }
+            100% {
+                -webkit-transform: scale(0.7);
+                transform: scale(0.7);
+            }
+        }
+        @keyframes shrinkIcon {
+            0% {
+                -webkit-transform: scale(1);
+                transform: scale(1);
+            }
+            100% {
+                -webkit-transform: scale(0.7);
+                transform: scale(0.7);
+            }
+        }
+
+        @-webkit-keyframes expandIcon {
+            0% {
+                -webkit-transform: scale(0.7);
+                transform: scale(0.7);
+            }
+            60% {
+                -webkit-transform: scale(1.05);
+                transform: scale(1.05);
+            }
+            100% {
+                -webkit-transform: scale(1);
+                transform: scale(1);
+            }
+        }
+        @keyframes expandIcon {
+            0% {
+                -webkit-transform: scale(0.7);
+                transform: scale(0.7);
+            }
+            60% {
+                -webkit-transform: scale(1.05);
+                transform: scale(1.05);
+            }
+            100% {
+                -webkit-transform: scale(1);
+                transform: scale(1);
+            }
+        }
+        
+        
+        /* Add this below your existing styles */
+.touch-scrollbars {
+    scrollbar-width: auto !important; /* For Firefox */
+}
+.touch-scrollbars::-webkit-scrollbar {
+    width: 8px; /* or whatever width you like for native scrollbar on iOS/Android */
+    height: 8px;
+}
+
+        
+        
+        
+        
+        
+    </style>
+</head>
+<body>
+
+<div class="iframe-container">
+    <iframe id="iframe" src="https://hansenhomeai.github.io/SwapDemo/" allowfullscreen></iframe>
+</div>
+
+<!-- Invisible overlay to detect outside clicks when details are open -->
+<div id="overlay"></div>
+
+<div class="menu-container" id="menuContainer">
+    <div id="detailsButton" class="menu-button">
+        <img src="https://raw.githubusercontent.com/HansenHomeAI/FigmaSVGButtons/main/DetailsIconDefault.svg" alt="Details" draggable="false">
+    </div>
+    <div id="fullscreenButton" class="menu-button">
+        <img src="https://raw.githubusercontent.com/HansenHomeAI/FigmaSVGButtons/main/FullScreenIconDefault.svg" alt="Fullscreen" draggable="false">
+    </div>
+</div>
+
+<div id="detailsBox" class="details-box">
+    <div class="details-content" id="detailsContent">
+        <div class="details-inner" id="detailsInner">
+            <h1>Property Details</h1>
+            <hr style="border:none; border-top:1px solid rgba(255,255,255,0.4); margin:15px 0;">
+            <hr style="border:none; border-top:0px solid rgba(255,255,255,0.4); margin:13px 0;">
+
+            <p>
+One of the premier estates within Wolf Creek Ranch, esteemed for its flat lot, multitude of trees, fully fenced yard and pristine views of Mt. Timpanogos. The home features four en-suite bedrooms and all the living spaces on one floor. The perfect mountain estate for your family with room to build a barn, a separate guest house and a yurt, upon your 160 acres. Wolf Creek Ranch is a unique development yet to be duplicated in the mountains west. Amenities include 60 Miles of private, maintained trail system for hiking, ATVs, snowmobiling, and snowshoeing; owners guest house, equestrian program, stocked trout ponds, private fishing on the Provo River, onsite staff, year-round paved roads, gated entry, and a 7 Mile border with the Uinta National Forest
+            <div class="legal-disclaimer">
+                <hr style="border:none; border-top:1px solid rgba(255,255,255,0.4); margin:30px 0;">
+                
+                All rights reserved © 2024 Hansen Home AI LLC. Hansen Home AI LLC's proprietary technology is protected by intellectual property laws, and unauthorized use is strictly prohibited. Lot lines displayed are approximate and not legally binding. Hansen Home AI LLC disclaims all warranties, express or implied, including but not limited to, implied warranties of merchantability and fitness for a particular purpose. The company is not liable for any damages arising from the use of this product, including direct, indirect, incidental, punitive, and consequential damages. Hansen Home AI and related marks are trademarks of Hansen Home AI LLC, and may not be used without written permission. All other trademarks on this site belong to their respective owners.
+            </div>
+        </div>
+    </div>
+    <div class="custom-scrollbar" id="customScrollbar">
+        <div class="custom-scroll-thumb" id="customThumb"></div>
+    </div>
+</div>
+
+<script>
+    const detailsButton = document.getElementById('detailsButton');
+    const fullscreenButton = document.getElementById('fullscreenButton');
+    const detailsBox = document.getElementById('detailsBox');
+    const overlay = document.getElementById('overlay');
+    const detailsContent = document.getElementById('detailsContent');
+    const customThumb = document.getElementById('customThumb');
+    const customScrollbar = document.getElementById('customScrollbar');
+    const detailsInner = document.getElementById('detailsInner');
+    const menuContainer = document.getElementById('menuContainer');
+
+    let isDetailsOpen = false;
+    let isDraggingThumb = false;
+    let dragStartY = 0;
+    let startScrollTop = 0;
+    let scrollbarFadeTimeout;
+
+    // Original base spacing and sizes:
+    const baseMenuLeft = 20;
+    const baseMenuBottom = 20;
+    const baseDetailsTop = 60;
+    const baseDetailsBottom = 60;
+    const baseDetailsLeft = 20;
+    const baseDetailsRight = 20;
+
+    // Original font sizes:
+    const baseH1 = 30;
+    const baseP = 17;
+    const baseDisclaimer = 10;
+
+    // Original details-inner padding:
+    const basePaddingTopBottom = 40;
+    const basePaddingLeftRight = 30;
+
+    // Original menu-container dimensions, padding, and gap (for scaling):
+    const baseMenuWidth = 105;
+    const baseMenuHeight = 59;
+    const baseMenuPadding = 7;
+    const baseMenuGap = 1;
+    const baseMenuBorderRadius = 30;
+    const baseButtonWidth = 45;
+    const baseButtonHeight = 45;
+
+    function applyLayoutMode() {
+        const ratio = window.innerWidth / window.innerHeight;
+        let mode;
+        if (ratio > 4/3) {
+            mode = 'desktop';
+        } else if (ratio >= 3/4 && ratio <= 4/3) {
+            mode = 'tablet';
+        } else {
+            mode = 'mobile';
+        }
+
+        let menuLeft = baseMenuLeft;
+        let menuBottom = baseMenuBottom;
+        let detailsTop = baseDetailsTop;
+        let detailsBottom = baseDetailsBottom;
+        let detailsLeft = baseDetailsLeft;
+        let detailsRight = baseDetailsRight;
+        let scaleFactor = 1.0;
+        let h1Size = baseH1;
+        let pSize = baseP;
+        let disclaimerSize = baseDisclaimer;
+        let innerPaddingTopBottom = basePaddingTopBottom;
+        let innerPaddingLeftRight = basePaddingLeftRight;
+
+        if (mode === 'desktop') {
+            menuLeft += 20; 
+            menuBottom += 20;
+            detailsLeft += 20;
+            detailsRight += 20;
+            detailsTop += 20;
+            detailsBottom += 20;
+        } else if (mode === 'tablet') {
+            scaleFactor = 0.9;
+            h1Size = Math.round(baseH1 * 0.9);
+            pSize = Math.round(baseP * 0.9);
+            disclaimerSize = Math.round(baseDisclaimer * 0.9);
+        } else {
+            // Mobile
+            menuLeft = baseMenuLeft - 5;
+            menuBottom = baseMenuBottom - 5;
+            detailsLeft = baseDetailsLeft - 5;
+            detailsRight = baseDetailsRight - 5;
+            detailsTop = baseDetailsTop - 5;
+            detailsBottom = baseDetailsBottom - 10;
+            scaleFactor = 0.8;
+            h1Size = Math.round(baseH1 * 0.8);
+            pSize = Math.round(baseP * 0.8);
+            disclaimerSize = Math.round(baseDisclaimer * 0.8);
+            innerPaddingTopBottom = basePaddingTopBottom - 7;
+            innerPaddingLeftRight = basePaddingLeftRight - 15;
+        }
+
+        menuContainer.style.bottom = menuBottom + 'px';
+        menuContainer.style.left = menuLeft + 'px';
+
+        menuContainer.style.webkitTransform = 'scale(' + scaleFactor + ')';
+        menuContainer.style.transform = 'scale(' + scaleFactor + ')';
+
+        detailsBox.style.top = detailsTop + 'px';
+        detailsBox.style.bottom = detailsBottom + 'px';
+        detailsBox.style.left = detailsLeft + 'px';
+        detailsBox.style.right = detailsRight + 'px';
+        detailsBox.style.maxHeight = '';
+
+        const h1s = detailsBox.querySelectorAll('h1');
+        h1s.forEach(h => { h.style.fontSize = h1Size + 'px'; });
+
+        const ps = detailsBox.querySelectorAll('p');
+        ps.forEach(pElem => { pElem.style.fontSize = pSize + 'px'; });
+
+        const disclaimers = detailsBox.querySelectorAll('.legal-disclaimer');
+        disclaimers.forEach(d => { d.style.fontSize = disclaimerSize + 'px'; });
+
+        detailsInner.style.padding = innerPaddingTopBottom + 'px ' + innerPaddingLeftRight + 'px';
+    }
+
+    function animateIconChange(imgElement, newSrc) {
+        imgElement.style.animation = 'none';
+        imgElement.offsetHeight;
+        imgElement.style.webkitAnimation = 'shrinkIcon 0.1s ease forwards';
+        imgElement.style.animation = 'shrinkIcon 0.1s ease forwards';
+
+        function handleShrink(e) {
+            if (e.animationName === 'shrinkIcon') {
+                if (newSrc) imgElement.src = newSrc;
+                imgElement.style.animation = 'none';
+                imgElement.style.webkitAnimation = 'none';
+                imgElement.offsetHeight; 
+                imgElement.style.webkitAnimation = 'expandIcon 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards';
+                imgElement.style.animation = 'expandIcon 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards';
+            } else if (e.animationName === 'expandIcon') {
+                imgElement.removeEventListener('animationend', handleShrink);
+                imgElement.removeEventListener('webkitAnimationEnd', handleShrink);
+            }
+        }
+
+        imgElement.addEventListener('animationend', handleShrink);
+        imgElement.addEventListener('webkitAnimationEnd', handleShrink);
+    }
+
+    function openDetails() {
+        isDetailsOpen = true;
+        detailsBox.classList.add('show');
+        animateIconChange(detailsButton.querySelector('img'), 'https://raw.githubusercontent.com/HansenHomeAI/FigmaSVGButtons/main/Close2IconDefault.svg');
+        overlay.classList.add('active');
+        updateScrollbar();
+    }
+
+    function closeDetails() {
+        isDetailsOpen = false;
+        detailsBox.classList.remove('show');
+        animateIconChange(detailsButton.querySelector('img'), 'https://raw.githubusercontent.com/HansenHomeAI/FigmaSVGButtons/main/DetailsIconDefault.svg');
+        overlay.classList.remove('active');
+    }
+
+    detailsButton.addEventListener('mouseup', () => {
+        const img = detailsButton.querySelector('img');
+        if (isDetailsOpen) {
+            animateIconChange(img, 'https://raw.githubusercontent.com/HansenHomeAI/FigmaSVGButtons/main/DetailsIconDefault.svg');
+            closeDetails();
+        } else {
+            animateIconChange(img, 'https://raw.githubusercontent.com/HansenHomeAI/FigmaSVGButtons/main/Close2IconDefault.svg');
+            openDetails();
+        }
+    });
+
+    fullscreenButton.addEventListener('mouseup', async () => {
+        const img = fullscreenButton.querySelector('img');
+        let newSrc;
+        if (document.fullscreenElement) {
+            await document.exitFullscreen().catch(() => {});
+            newSrc = 'https://raw.githubusercontent.com/HansenHomeAI/FigmaSVGButtons/main/FullScreenIconDefault.svg';
+        } else {
+            try {
+                await document.documentElement.requestFullscreen();
+                newSrc = 'https://raw.githubusercontent.com/HansenHomeAI/FigmaSVGButtons/main/MinimizeIconDefault.svg';
+            } catch (err) {
+                console.error(`Error: ${err.message} (${err.name})`);
+                newSrc = 'https://raw.githubusercontent.com/HansenHomeAI/FigmaSVGButtons/main/FullScreenIconDefault.svg';
+            }
+        }
+        animateIconChange(img, newSrc);
+    });
+
+    function updateFullscreenIcon() {
+        const img = fullscreenButton.querySelector('img');
+        if (document.fullscreenElement) {
+            animateIconChange(img, 'https://raw.githubusercontent.com/HansenHomeAI/FigmaSVGButtons/main/MinimizeIconDefault.svg');
+        } else {
+            animateIconChange(img, 'https://raw.githubusercontent.com/HansenHomeAI/FigmaSVGButtons/main/FullScreenIconDefault.svg');
+        }
+    }
+
+    document.addEventListener('fullscreenchange', updateFullscreenIcon);
+
+    overlay.addEventListener('click', () => {
+        if (isDetailsOpen) {
+            closeDetails();
+        }
+    });
+
+    function updateScrollbar() {
+        const contentHeight = detailsContent.scrollHeight;
+        const visibleHeight = detailsContent.clientHeight;
+        const detailsBoxRect = detailsBox.getBoundingClientRect();
+        
+        const topMargin = 30;
+        const bottomMargin = 30;
+        const trackHeight = detailsBoxRect.height - (topMargin + bottomMargin); 
+        const thumbHeight = Math.max((visibleHeight / contentHeight) * trackHeight, 20);
+        customThumb.style.height = thumbHeight + 'px';
+
+        const scrollRatio = (detailsContent.scrollTop / (contentHeight - visibleHeight)) || 0;
+        const thumbMaxY = trackHeight - thumbHeight;
+        const thumbY = topMargin + thumbMaxY * scrollRatio;
+        customThumb.style.top = thumbY + 'px';
+    }
+
+    detailsContent.addEventListener('scroll', () => {
+        updateScrollbar();
+        showScrollbar();
+    });
+
+    customThumb.addEventListener('mousedown', (e) => {
+        isDraggingThumb = true;
+        dragStartY = e.clientY;
+        startScrollTop = detailsContent.scrollTop;
+        document.addEventListener('mousemove', onThumbDrag);
+        document.addEventListener('mouseup', onThumbRelease);
+        e.preventDefault();
+    });
+
+    function onThumbDrag(e) {
+        if (!isDraggingThumb) return;
+        const topMargin = 30;
+        const bottomMargin = 30;
+        const detailsBoxRect = detailsBox.getBoundingClientRect();
+        const trackHeight = detailsBoxRect.height - (topMargin + bottomMargin);
+        const contentHeight = detailsContent.scrollHeight;
+        const visibleHeight = detailsContent.clientHeight;
+
+        const deltaY = e.clientY - dragStartY;
+        const thumbHeight = parseFloat(customThumb.style.height);
+        const thumbMaxY = trackHeight - thumbHeight;
+        const scrollable = contentHeight - visibleHeight;
+        const scrollRatio = scrollable / thumbMaxY;
+
+        detailsContent.scrollTop = startScrollTop + deltaY * scrollRatio;
+        updateScrollbar();
+        showScrollbar();
+    }
+
+    function onThumbRelease() {
+        isDraggingThumb = false;
+        document.removeEventListener('mousemove', onThumbDrag);
+        document.removeEventListener('mouseup', onThumbRelease);
+        fadeOutScrollbarLater();
+    }
+
+    detailsBox.addEventListener('mousemove', (e) => {
+        const detailsBoxRect = detailsBox.getBoundingClientRect();
+        const distanceFromRight = detailsBoxRect.right - e.clientX;
+        if (distanceFromRight < 30) {
+            showScrollbar();
+        } else {
+            fadeOutScrollbarLater();
+        }
+    });
+
+    function showScrollbar() {
+        customScrollbar.style.opacity = '1';
+        fadeOutScrollbarLater();
+    }
+
+    function fadeOutScrollbarLater() {
+        if (scrollbarFadeTimeout) clearTimeout(scrollbarFadeTimeout);
+        scrollbarFadeTimeout = setTimeout(() => {
+            if (!isDraggingThumb) {
+                customScrollbar.style.opacity = '0';
+            }
+        }, 1500);
+    }
+
+    customScrollbar.style.opacity = '0';
+
+
+// Detect if the device is touch-capable
+const isTouchDevice = ('ontouchstart' in window || navigator.maxTouchPoints > 0);
+
+// If it's a touch device, disable custom scrollbar and revert to native scrollbar
+if (isTouchDevice) {
+    // Hide the custom scrollbar entirely
+    customScrollbar.style.display = 'none';
+    
+    // Remove the "no visible scrollbar" styles so that native scrollbar can appear
+    detailsContent.classList.add('touch-scrollbars');
+    // Also ensure overflow is set to auto to allow native scrolling
+    detailsContent.style.overflowY = 'auto';
+}
+
+
+
+
+
+
+
+    // Handle hover circle for touch devices: add/remove 'active' on touchstart/touchend
+    document.querySelectorAll('.menu-button').forEach(btn => {
+        btn.addEventListener('touchstart', () => {
+            btn.classList.add('active');
+        }, {passive: true});
+
+        btn.addEventListener('touchend', () => {
+            btn.classList.remove('active');
+        }, {passive: true});
+
+        btn.addEventListener('touchcancel', () => {
+            btn.classList.remove('active');
+        }, {passive: true});
+    });
+
+    // Apply layout mode on load and on resize
+    window.addEventListener('resize', applyLayoutMode);
+    window.addEventListener('load', () => {
+        applyLayoutMode();
+        updateScrollbar();
+    });
+</script>
+
+</body>
+</html>
